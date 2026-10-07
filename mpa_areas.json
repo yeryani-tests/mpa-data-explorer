@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"id": "cabo-pulmo", "name": "Cabo Pulmo", "country": "Mexico"},
+      "geometry": {"type": "Polygon", "coordinates": [[[-109.46, 23.37], [-109.37, 23.37], [-109.37, 23.47], [-109.46, 23.47], [-109.46, 23.37]]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"id": "tubbataha", "name": "Tubbataha Reefs", "country": "Philippines"},
+      "geometry": {"type": "Polygon", "coordinates": [[[119.75, 8.70], [120.05, 8.70], [120.05, 9.02], [119.75, 9.02], [119.75, 8.70]]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"id": "lundy", "name": "Lundy", "country": "United Kingdom"},
+      "geometry": {"type": "Polygon", "coordinates": [[[-4.72, 51.14], [-4.62, 51.14], [-4.62, 51.24], [-4.72, 51.24], [-4.72, 51.14]]]}
+    }
+  ]
+}
