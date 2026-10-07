@@ -128,3 +128,30 @@ def records_csv(area_id):
     filename = f"obis_{area_id}_{date.today().isoformat()}.csv"
     return Response(out.getvalue(), mimetype="text/csv",
                     headers={"Content-Disposition": f"attachment; filename={filename}"})
+                    # Major marine groups used to show where there is NO data. This list is a judgement call.
+REFERENCE_PHYLA = ["Chordata", "Mollusca", "Arthropoda", "Cnidaria", "Annelida", "Echinodermata",
+                   "Porifera", "Bryozoa", "Platyhelminthes", "Nematoda", "Ctenophora",
+                   "Rhodophyta", "Chlorophyta", "Ochrophyta"]
+CHECKLIST_MAX = int(os.environ.get("CHECKLIST_MAX_ROWS", "1000"))
+
+
+@app.route("/api/areas/<area_id>/phyla")
+def phyla(area_id):
+    """Records per phylum (from the OBIS checklist). Reference phyla with no records are
+    returned with 0 so the page can show them as gaps."""
+    data = obis_get("checklist", geometry=to_wkt(get_feature(area_id)), size=CHECKLIST_MAX)
+    rows = data.get("results", [])
+    counts, no_phylum = {}, 0
+    for r in rows:
+        n = int(r.get("records") or 0)
+        ph = r.get("phylum")
+        if ph:
+            counts[ph] = counts.get(ph, 0) + n
+        else:
+            no_phylum += n
+    names = list(dict.fromkeys(REFERENCE_PHYLA + list(counts)))
+    items = [{"phylum": n, "records": counts.get(n, 0), "reference": n in REFERENCE_PHYLA}
+             for n in names]
+    items.sort(key=lambda i: (-i["records"], i["phylum"]))
+    return jsonify({"phyla": items, "taxa": len(rows),
+                    "truncated": len(rows) >= CHECKLIST_MAX, "no_phylum_records": no_phylum})

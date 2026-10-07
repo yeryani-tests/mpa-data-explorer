@@ -23,7 +23,7 @@
   <div id="controls">
     <label for="area">Protected area: </label>
     <select id="area"></select>
-        <a id="csv" href="#" style="margin-left:12px;font-size:13px">Download CSV (sample)</a>
+    <a id="csv" href="#" style="margin-left:12px;font-size:13px">Download CSV (sample)</a>
     <span id="note"></span>
     <span id="status"></span>
   </div>
@@ -33,6 +33,10 @@
     <div id="summary"></div>
     <div class="chart-box"><canvas id="years"></canvas></div>
     <div class="legend">Blue bars: years with records. Red bars: years with no records. Map cells: number of OBIS records (darker = more).</div>
+    <h2 style="font-size:16px;margin:22px 0 0">Records per phylum</h2>
+    <div id="phsummary" style="font-size:14px;margin:6px 0 10px"></div>
+    <div class="chart-box" style="height:380px"><canvas id="phyla"></canvas></div>
+    <div class="legend">Blue bars: major groups with records. Red bars: major marine groups with no records here.</div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -76,7 +80,8 @@
         options: { responsive: true, maintainAspectRatio: false, animation: false,
           scales: { x: { stacked: true, ticks: { maxTicksLimit: 15 } },
                     y: { stacked: true, title: { display: true, text: "records" } } },
-          plugins: { legend: { display: false } } }
+          plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: c => c.dataset.label === "No records" ? "No records" : c.parsed.y.toLocaleString() + " records" } } } }
       });
     }
 
@@ -85,6 +90,31 @@
       summary.textContent = d.total.toLocaleString() + " records dated between " + d.first_year +
         " and " + d.last_year + ". " + d.empty_years + " of " + d.span_years +
         " years (" + d.first_year + " to now) have no records.";
+    }
+
+    let phChart = null;
+    function drawPhyla(d) {
+      const items = d.phyla;
+      const max = Math.max(1, ...items.map(i => i.records));
+      const labels = items.map(i => i.phylum + (i.records ? " (" + i.records.toLocaleString() + ")" : " (none)"));
+      const present = items.map(i => (i.records > 0 ? i.records : null));
+      const gaps = items.map(i => (i.records === 0 ? max : null));
+      const empty = items.filter(i => i.records === 0).length;
+      document.getElementById("phsummary").textContent =
+        (items.length - empty) + " phyla have records; " + empty + " major marine groups have none." +
+        (d.truncated ? " Note: the list was capped, so some taxa may be missing." : "");
+      if (phChart) phChart.destroy();
+      phChart = new Chart(document.getElementById("phyla"), {
+        type: "bar",
+        data: { labels: labels, datasets: [
+          { label: "Records", data: present, backgroundColor: "#2e75b6" },
+          { label: "No records", data: gaps, backgroundColor: "rgba(192,57,43,0.35)" }
+        ]},
+        options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, animation: false,
+          scales: { x: { stacked: true, title: { display: true, text: "records" } }, y: { stacked: true } },
+          plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: c => c.dataset.label === "No records" ? "No records" : c.parsed.x.toLocaleString() + " records" } } } }
+      });
     }
 
     async function getJSON(url) {
@@ -98,10 +128,11 @@
       statusEl.textContent = "Loading OBIS data...";
       summary.textContent = "";
       try {
-        const [grid, yrs] = await Promise.all([
-          getJSON("/api/areas/" + id + "/grid"), getJSON("/api/areas/" + id + "/years")]);
+        const [grid, yrs, ph] = await Promise.all([
+          getJSON("/api/areas/" + id + "/grid"), getJSON("/api/areas/" + id + "/years"),
+          getJSON("/api/areas/" + id + "/phyla")]);
         if (mine !== token) return;
-        drawCells(grid); showSummary(yrs); drawYears(yrs);
+        drawCells(grid); showSummary(yrs); drawYears(yrs); drawPhyla(ph);
         statusEl.textContent = "";
       } catch (e) {
         if (mine === token) statusEl.textContent = "Could not load OBIS data: " + e.message;
