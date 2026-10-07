@@ -23,6 +23,7 @@
   <div id="controls">
     <label for="area">Protected area: </label>
     <select id="area"></select>
+        <a id="csv" href="#" style="margin-left:12px;font-size:13px">Download CSV (sample)</a>
     <span id="note"></span>
     <span id="status"></span>
   </div>
@@ -115,6 +116,7 @@
       outline = L.geoJSON(f, { style: { color: "#c0392b", weight: 2, fillOpacity: 0 } }).addTo(map);
       map.fitBounds(outline.getBounds(), { padding: [30, 30] });
       note.textContent = f.properties.country + " (simplified, approximate outline)";
+      document.getElementById("csv").href = "/api/areas/" + id + "/records.csv";
       loadData(id);
     }
 

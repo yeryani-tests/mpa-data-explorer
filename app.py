@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import os
 import time
@@ -5,7 +7,7 @@ from datetime import date
 from pathlib import Path
 
 import requests
-from flask import Flask, abort, jsonify, render_template
+from flask import Flask, Response, abort, jsonify, render_template
 
 app = Flask(__name__)
 
@@ -14,6 +16,7 @@ OBIS_BASE = os.environ.get("OBIS_BASE_URL", "https://api.obis.org/v3")
 GRID_PRECISION = int(os.environ.get("GRID_PRECISION", "5"))
 CACHE_TTL = int(os.environ.get("CACHE_TTL_SECONDS", "3600"))
 TIMEOUT = int(os.environ.get("OBIS_TIMEOUT_SECONDS", "60"))
+CSV_MAX = int(os.environ.get("CSV_MAX_RECORDS", "1000"))
 
 AREAS = json.loads((Path(__file__).parent / "mpa_areas.json").read_text(encoding="utf-8"))
 FEATURES = {f["properties"]["id"]: f for f in AREAS["features"]}
@@ -94,3 +97,34 @@ def years(area_id):
         "empty_years": sum(1 for n in records if n == 0),
         "span_years": len(all_years),
     })
+
+
+CSV_COLUMNS = ["id", "occurrenceID", "scientificName", "aphiaID", "taxonRank", "phylum", "class",
+               "order", "family", "eventDate", "date_year", "decimalLatitude", "decimalLongitude",
+               "basisOfRecord", "datasetName", "dataset_id", "institutionCode"]
+
+
+@app.route("/api/areas/<area_id>/records.csv")
+def records_csv(area_id):
+    """A capped sample of the underlying records (presence only), with a citation header."""
+    feature = get_feature(area_id)
+    data = obis_get("occurrence", geometry=to_wkt(feature), size=CSV_MAX, absence="false")
+    results = data.get("results", [])
+    total = data.get("total", len(results))
+    name = feature["properties"]["name"]
+
+    out = io.StringIO()
+    out.write("# Source: OBIS (Ocean Biodiversity Information System), Intergovernmental "
+              "Oceanographic Commission of UNESCO, https://obis.org\n")
+    out.write(f"# Retrieved {date.today().isoformat()} via {OBIS_BASE}/occurrence for the "
+              f"approximate outline of {name}.\n")
+    out.write(f"# This file holds {len(results)} of {total} matching records (capped sample). "
+              "Cite OBIS and the individual datasets (dataset_id) when you reuse the data.\n")
+    writer = csv.writer(out)
+    writer.writerow(CSV_COLUMNS)
+    for rec in results:
+        writer.writerow([rec.get(c, "") for c in CSV_COLUMNS])
+
+    filename = f"obis_{area_id}_{date.today().isoformat()}.csv"
+    return Response(out.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename={filename}"})
