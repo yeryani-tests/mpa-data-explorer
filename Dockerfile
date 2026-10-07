@@ -8,4 +8,4 @@ COPY . .
 USER appuser
 ENV PORT=8000
 EXPOSE 8000
-CMD ["sh", "-c", "gunicorn -b 0.0.0.0:${PORT} app:app"]
+CMD ["sh", "-c", "gunicorn -b 0.0.0.0:${PORT} --timeout 90 app:app"]
