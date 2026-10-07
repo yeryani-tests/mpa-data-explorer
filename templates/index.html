@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MPA Data Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    body { font-family: sans-serif; margin: 0; }
+    header { padding: 12px 16px; background: #0b3c5d; color: white; }
+    #controls { padding: 10px 16px; }
+    #map { height: 70vh; background: #dfeaf2; }
+  </style>
+</head>
+<body>
+  <header><h1 style="margin:0;font-size:20px">MPA Data Explorer</h1></header>
+  <div id="controls">
+    <label for="area">Protected area: </label>
+    <select id="area"><option>(areas will be added in step 2)</option></select>
+  </div>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map("map").setView([0, 0], 2);
+  </script>
+</body>
+</html>
